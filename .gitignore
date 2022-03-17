@@ -2,7 +2,6 @@
 thirdparty/*
 
 # DO NOT INCLUDE SENSITIVE INFORMATION
-secret/
 **.jpg
 **.jpeg
 **.png
