@@ -1,0 +1,13 @@
+.idea
+thirdparty/*
+
+# DO NOT INCLUDE SENSITIVE INFORMATION
+secret/
+**.jpg
+**.jpeg
+**.png
+**.npz
+**.csv
+
+# DO INCLUDE
+!checker_board.csv
