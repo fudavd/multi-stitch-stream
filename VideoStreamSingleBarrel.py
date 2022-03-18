@@ -8,10 +8,8 @@ from src.Calibrate.Barrel import CalibrateBarrel
 
 
 def run():
-    paths = []
     with open("./secret/cam_paths.txt", "r") as file:
-        for line in file:
-            paths.append(line)
+        paths = file.read().splitlines()
     ind = 1
 
     undistort = CalibrateBarrel(f'cam{ind}')

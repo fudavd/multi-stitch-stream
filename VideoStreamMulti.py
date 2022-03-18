@@ -13,7 +13,8 @@ async def run():
         paths = file.read().splitlines()
 
     cam_list = []
-    capture = MotionCapture.MotionCaptureRobot("spider", ["red", "green"], return_img=True).log_robot_pos
+    show_stream = True
+    capture = MotionCapture.MotionCaptureRobot("spider", ["red", "green"], return_img=show_stream).log_robot_pos
     hub = ZMQHub.ZMQHubReceiverThread(len(paths), verbose=True, merge_stream=True)
     hub.start()
     try:
@@ -23,14 +24,15 @@ async def run():
             cam = VideoStream.VideoStreamSender(path, f'cam{ind}', transform=[t_func])
             cam.start()
             cam_list.append(cam)
-        cv2.namedWindow("LAB", cv2.WINDOW_KEEPRATIO)
+        if show_stream:
+            cv2.namedWindow("LAB", cv2.WINDOW_KEEPRATIO)
         while not hub.stopped and hub.snapped is not True:
-            # time.sleep(0.01)
             dt, frame = await hub.wait_frame()
             frame = capture(frame)
-            cv2.imshow("LAB", frame)
+            if show_stream:
+                cv2.imshow("LAB", frame)
+            # print(hub.buffer.async_q.qsize(), dt)
             cv2.waitKey(1)
-            print(hub.buffer.qsize())
 
     except KeyboardInterrupt as e:
         print("Keyboard interrupt: CTR-C Detected. Closing threads")

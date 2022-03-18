@@ -33,11 +33,10 @@ class VideoStreamSender:
                 for transform in self.transform:
                     frame = transform(frame)
                 self.sender.send_image((self.cam_id, 'alive'), frame)
-                self.last_image = frame
         except Exception as e:
             stop_string = e.with_traceback()
 
-        self.sender.send_image((self.cam_id, stop_string, frame), np.zeros(4))
+        self.sender.send_image((self.cam_id, stop_string), np.zeros(4))
         self.sender.close()
         self.sender.zmq_socket.close()
         self.sender.zmq_context.term()

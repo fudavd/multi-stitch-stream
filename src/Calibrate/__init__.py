@@ -7,8 +7,8 @@ def create_single_remap(x_maps: list = [], y_maps: list = []):
     remap_x = x_maps[0]
     remap_y = y_maps[0]
     for map_x, map_y in zip(x_maps[1:], y_maps[1:]):
-        remap_x = cv2.remap(remap_x, map_x, map_y, cv2.INTER_CUBIC)
-        remap_y = cv2.remap(remap_y, map_x, map_y, cv2.INTER_CUBIC)
+        remap_x = cv2.remap(remap_x, map_x, map_y, cv2.INTER_NEAREST)
+        remap_y = cv2.remap(remap_y, map_x, map_y, cv2.INTER_NEAREST)
     return remap_x, remap_y
 
 

@@ -67,8 +67,13 @@ def multistream(paths: List[str], merge_stream=False, snapshot=None):
             cam = VideoStream.VideoStreamSender(path, f'cam{ind}', transform=[t_func])
             cam.start()
             cam_list.append(cam)
+        cv2.namedWindow("LAB", cv2.WINDOW_KEEPRATIO)
         while not hub.stopped and hub.snapped is not True:
-            time.sleep(1)
+            if not hub.buffer.empty():
+                dt, frame = hub.buffer.get_nowait()
+                print(hub.buffer.qsize(), dt)
+                cv2.imshow("LAB", frame)
+            cv2.waitKey(1)
     except KeyboardInterrupt as e:
         print("Keyboard interrupt: CTR-C Detected. Closing threads")
     except Exception as e:
@@ -216,10 +221,8 @@ def calibrate_panorama(output_dir="./Calibration_data/Real/"):
 
 
 if __name__ == '__main__':
-    paths = []
     with open("./secret/cam_paths.txt", "r") as file:
-        for line in file:
-            paths.append(line)
+        paths = file.read().splitlines()
 
     remove_barrel = False
     if remove_barrel:

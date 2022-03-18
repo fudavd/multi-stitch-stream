@@ -5,6 +5,7 @@ import threading
 import time
 from typing import List
 import asyncio
+import janus
 import cv2
 from threading import Thread
 import imagezmq
@@ -26,7 +27,7 @@ class ZMQHubReceiverThread:
         self.latest_frames = {}
         self.n_stream = n_stream
         self.verbose = verbose
-        self.buffer = asyncio.Queue()
+        self.buffer = janus.Queue()
 
         self.h = -1
         self.w = -1
@@ -52,7 +53,7 @@ class ZMQHubReceiverThread:
                     calibration = np.load(file)
                     x_maps.append(calibration["map_x"])
                     y_maps.append(calibration["map_y"])
-            self.map_x, self.map_y = (x_maps, y_maps)
+            self.map_x, self.map_y = create_single_remap(x_maps, y_maps)
         except Exception as e:
             if verbose:
                 print("Could not Load merge data")
@@ -74,10 +75,9 @@ class ZMQHubReceiverThread:
                 self.hub.send_reply(b'OK')
                 cam_stream_started = True
                 self.h, self.w = frame.shape[:2]
-                frame_stack = np.zeros((self.h * self.n_stream, self.w, 3), dtype=np.uint8)
             except Exception as e:
                 cam_id = [None, e.with_traceback()]
-
+        frame_stack = np.zeros((self.h * self.n_stream, self.w, 3), dtype=np.uint8)
         if cam_id[1] != 'alive':
             print("Could not start stream", cam_id)
             self.stopped = True
@@ -97,13 +97,12 @@ class ZMQHubReceiverThread:
                 if self.merge_stream:
                     cam_n = int(re.findall('\d+', cam_id[0][-1])[-1])
                     frame_stack[self.h * cam_n:self.h * (cam_n + 1), :] = frame
-                    img = cv2.remap(frame_stack, self.map_x[0], self.map_y[0], cv2.INTER_CUBIC)
-                    img = cv2.remap(img, self.map_x[1], self.map_y[1], cv2.INTER_CUBIC)
+                    img = cv2.remap(frame_stack, self.map_x, self.map_y, cv2.INTER_LINEAR)
                     self.latest_frames["LAB"] = img
                 else:
                     img = frame
                     self.latest_frames[cam_id[0]] = img
-                self.buffer.put_nowait((curr_time - self.start_t, img))
+                self.buffer.sync_q.put_nowait((curr_time - self.start_t, img))
                 self.start_t = curr_time
                 if curr_time - self.start_t > 10 and self.snapped is False:
                     self.snapshot()
@@ -114,6 +113,7 @@ class ZMQHubReceiverThread:
                 print(e)
 
         cv2.destroyAllWindows()
+        self.buffer.close()
         self.hub.close()
         self.hub.zmq_socket.close()
         self.hub.zmq_context.term()
@@ -121,7 +121,7 @@ class ZMQHubReceiverThread:
         return
 
     async def wait_frame(self):
-        return await self.buffer.get()
+        return await self.buffer.async_q.get()
 
     def exit(self):
         # indicate that the thread should be stopped
@@ -134,12 +134,8 @@ class ZMQHubReceiverThread:
     def snapshot(self):
         frame_stack = np.zeros((self.h * self.n_stream, self.w, 3), dtype=np.uint8)
         for id, frame in self.latest_frames.items():
-            if self.merge_stream:
-                cam_n = int(re.findall('\d+', id)[-1])
-                frame_stack[self.h * cam_n:self.h * (cam_n + 1), :] = frame
-            elif self.verbose:
-                outfile = os.path.join(self.output_dir, id + '.png')
-                cv2.imwrite(outfile, frame)
+            outfile = os.path.join(self.output_dir, id + '.png')
+            cv2.imwrite(outfile, frame)
 
         if self.merge_stream:
             img = cv2.remap(frame_stack, self.map_x, self.map_y, cv2.INTER_CUBIC)

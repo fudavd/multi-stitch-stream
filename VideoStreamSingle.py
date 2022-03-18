@@ -1,4 +1,5 @@
 import time
+import cv2
 from src.VideoStream import VideoStream
 from src.VideoStream import ZMQHub
 from src.Calibrate.Barrel_old import load_barrel_map
@@ -6,7 +7,7 @@ from src.Calibrate import create_transform_function
 from src.Transform import MotionCapture
 
 
-def run():
+async def run():
     with open("./secret/cam_paths.txt", "r") as file:
         paths = file.read().splitlines()
     ind = 1
@@ -18,8 +19,11 @@ def run():
     cam.start()
     hub.start()
     try:
+        cv2.namedWindow("LAB", cv2.WINDOW_KEEPRATIO)
         while not hub.stopped:
-            time.sleep(1)
+            dt, frame = await hub.wait_frame()
+            cv2.imshow("LAB", frame)
+            cv2.waitKey(1)
     except KeyboardInterrupt as e:
         print("Keyboard interrupt: CTR-C Detected. Closing threads")
     except Exception as e:
@@ -37,6 +41,7 @@ def run():
 
 
 if __name__ == '__main__':
-    run()
+    import asyncio
+    asyncio.run(run())
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
