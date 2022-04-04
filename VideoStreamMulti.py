@@ -2,7 +2,7 @@ import time
 
 import cv2
 
-from src.Transform import MotionCapture
+from src.Experiments import MotionCapture
 from src.Calibrate import create_transform_function
 from src.Calibrate.Barrel_old import load_barrel_map
 from src.VideoStream import VideoStream, ZMQHub, close_stream
@@ -15,15 +15,17 @@ async def run():
     cam_list = []
     show_stream = True
     capture = MotionCapture.MotionCaptureRobot("spider", ["red", "green"], return_img=show_stream).log_robot_pos
-    hub = ZMQHub.ZMQHubReceiverThread(len(paths), verbose=True, merge_stream=True)
+    hub = ZMQHub.ZMQHubReceiverThread(1, verbose=True, merge_stream=True)
     hub.start()
     try:
+        t_funcs = []
         for ind, path in enumerate(paths):
             map_x, map_y, roi = load_barrel_map(f'./Calibration_data/Barrel/cam{ind}.npz')
-            t_func = create_transform_function(map_x, map_y)
-            cam = VideoStream.VideoStreamSender(path, f'cam{ind}', transform=[t_func])
-            cam.start()
-            cam_list.append(cam)
+            t_funcs.append(create_transform_function(map_x, map_y))
+
+        cam = VideoStream.VideoStreamSender(paths, f'frame_stack', transform=t_funcs)
+        cam.start()
+        cam_list.append(cam)
         if show_stream:
             cv2.namedWindow("LAB", cv2.WINDOW_KEEPRATIO)
         while not hub.stopped and hub.snapped is not True:
@@ -31,8 +33,8 @@ async def run():
             frame = capture(frame)
             if show_stream:
                 cv2.imshow("LAB", frame)
+                cv2.waitKey(1)
             # print(hub.buffer.async_q.qsize(), dt)
-            cv2.waitKey(1)
 
     except KeyboardInterrupt as e:
         print("Keyboard interrupt: CTR-C Detected. Closing threads")

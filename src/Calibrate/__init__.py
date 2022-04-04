@@ -17,7 +17,7 @@ def create_transform_function(map_x, map_y, roi=None):
 
 
 def _create_transform_function(img, _map_x, _map_y, _roi=None):
-    img = cv2.remap(img, _map_x, _map_y, cv2.INTER_LINEAR)
+    img = cv2.remap(img, _map_x, _map_y, cv2.INTER_NEAREST)
     if _roi is not None:
         y, x, h, w = _roi
         img = img[y:y+h, x:x+w]

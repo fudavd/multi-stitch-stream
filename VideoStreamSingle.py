@@ -4,7 +4,7 @@ from src.VideoStream import VideoStream
 from src.VideoStream import ZMQHub
 from src.Calibrate.Barrel_old import load_barrel_map
 from src.Calibrate import create_transform_function
-from src.Transform import MotionCapture
+from src.Experiments import MotionCapture
 
 
 async def run():

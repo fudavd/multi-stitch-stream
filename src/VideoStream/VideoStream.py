@@ -1,14 +1,19 @@
+import re
 from threading import Thread
 import time
+from typing import List
+
 import imagezmq
 import numpy as np
 from imutils.video import VideoStream
 
 
 class VideoStreamSender:
-    def __init__(self, path: str, stream_id: str, transform: list = []):
-        cap = VideoStream(path)
-        self.stream = cap.start()
+    def __init__(self, paths: List[str], stream_id: str, transform: List = []):
+        self.streams = []
+        for ind, path in enumerate(paths):
+            cap = VideoStream(path)
+            self.streams.append((ind, cap.start()))
         self.stopped = False
         self.transform = transform
 
@@ -17,6 +22,9 @@ class VideoStreamSender:
 
         # intialize thread
         self.thread = Thread(target=self.update, args=())
+        self.h = None
+        self.w = None
+        self.n_streams = len(self.streams)
 
     def start(self):
         # start a thread to read frames from the file video stream
@@ -27,20 +35,29 @@ class VideoStreamSender:
     def update(self):
         # keep looping infinitely
         stop_string = 'stream loading error'
+        frame = self.streams[0][1].read()
+        self.h, self.w = frame.shape[:2]
+        frame_stack = np.zeros((self.h * self.n_streams, self.w, 3), dtype=np.uint8)
+
         try:
             while not self.stopped:
-                frame = self.stream.read()
-                for transform in self.transform:
-                    frame = transform(frame)
-                self.sender.send_image((self.cam_id, 'alive'), frame)
+                curr_time = time.time()
+                for ind, cam in self.streams:
+                    frame = cam.read()
+                    frame = self.transform[ind](frame)
+                    frame_stack[self.h * ind:self.h * (ind + 1), :] = frame
+                self.sender.send_image((self.cam_id, 'alive', curr_time), frame_stack)
+            stop_string = "recv. stop signal"
         except Exception as e:
             stop_string = e.with_traceback()
 
         self.sender.send_image((self.cam_id, stop_string), np.zeros(4))
+        time.sleep(1)
         self.sender.close()
         self.sender.zmq_socket.close()
         self.sender.zmq_context.term()
-        self.stream.stop()
+        for ind, cam in self.streams:
+            cam.stop()
         return
 
     def exit(self):

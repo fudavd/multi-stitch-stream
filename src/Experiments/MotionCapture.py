@@ -1,3 +1,4 @@
+import os.path
 import traceback
 import sys
 import time
@@ -92,18 +93,19 @@ class MotionCapture:
 
 
 class MotionCaptureRobot:
-    def __init__(self, robot_id: str, colors: List[str], return_img=False):
+    def __init__(self, robot_id: str, colors: List[str], return_img=False, verbose=True):
+        self.verbose = verbose
         self.return_img = return_img
         self.robot_id = robot_id
         self.colors = colors
         self.contour_colors = (obtain_color_range([colors[0]]), obtain_color_range([colors[1]]))
         self.tolerance = 5
         self.pix2real = pix2meter
-        self.robot_states = np.empty(4)
+        self.robot_states = np.empty((0, 4))
         self.t = []
         self.prev_state = None
 
-    def log_robot_pos(self, img):
+    def log_robot_pos(self, img, time_stamp=None):
         Img = img.copy()
         Img_r = cv2.resize(Img.copy(), (int(Img.shape[1]/2), int(Img.shape[0]/2)))
         contours_area = []
@@ -149,7 +151,10 @@ class MotionCaptureRobot:
                         (x_big + w_big / 2, (y_big + h_big / 2), direction_vector_x, direction_vector_y)]
 
         n_possible_pos = len(robot_data)
-        curr_t = time.time()
+        if time_stamp is None:
+            curr_t = time.time()
+        else:
+            curr_t = time_stamp
         curr_state = np.array(robot_data)
         idx = None
         if n_possible_pos == 1:
@@ -159,7 +164,7 @@ class MotionCaptureRobot:
             idx = 0
         elif n_possible_pos > 1 and self.prev_state is not None:
             d = np.linalg.norm(curr_state[:, :2] - self.prev_state[:2], axis=1)
-            if self.pix2real(min(d)) < 0.1 or (curr_t-self.t[-1]) > 3:
+            if self.pix2real(min(d)) < 0.5 or (curr_t-self.t[-1]) > 3:
                 idx = np.argmin(d)
                 curr_state = np.array(robot_data[idx])
                 self.prev_state = curr_state.squeeze()
@@ -183,3 +188,13 @@ class MotionCaptureRobot:
 
     def get_current_state(self):
         return self.prev_state
+
+    def save_results(self, dir=''):
+        if len(self.robot_states) == 0 or len(self.t) == 0 or len(self.robot_states) != len(self.t):
+            if self.verbose:
+                print(f'Could not save PositionCapture len: robot states {len(self.robot_states)}, t {len(self.t)}')
+        elif os.path.exists(dir):
+            if not os.path.exists(os.path.join(dir, self.robot_id)):
+                os.mkdir(os.path.join(dir, self.robot_id))
+            np.save(os.path.join(dir, self.robot_id, "state",), np.array(self.robot_states))
+            np.save(os.path.join(dir, self.robot_id, "t",), np.array(self.t).reshape((len(self.t), 1)))

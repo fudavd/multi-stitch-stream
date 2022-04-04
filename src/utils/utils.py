@@ -20,6 +20,12 @@ def bernoulli(p, shape):
     return np.random.binomial(1, p, shape)
 
 
+def nearest(data, reference):
+    val = min(data, key=lambda x: abs(x - reference))
+    index = np.argmin(abs(np.array(data) - val))
+    return val, index
+
+
 class Image:
     def __init__(self, name: str, path: str = None, size: int = None, out_dir: str = './Calibration_data/Stitch/'):
         """

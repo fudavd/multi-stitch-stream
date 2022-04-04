@@ -10,7 +10,7 @@ import cv2
 from threading import Thread
 import imagezmq
 import numpy as np
-from src.Calibrate import create_transform_function, create_single_remap
+from src.Calibrate import create_single_remap
 
 
 class ZMQHubReceiverThread:
@@ -66,7 +66,7 @@ class ZMQHubReceiverThread:
         self.thread.start()
         return
 
-    def update(self):
+    def initialize_connection(self):
         cam_stream_started = False
         cam_id = [None, "Never received image"]
         while not cam_stream_started and time.time() - self.start_t < 5:
@@ -77,34 +77,41 @@ class ZMQHubReceiverThread:
                 self.h, self.w = frame.shape[:2]
             except Exception as e:
                 cam_id = [None, e.with_traceback()]
-        frame_stack = np.zeros((self.h * self.n_stream, self.w, 3), dtype=np.uint8)
+                time.sleep(0.1)
         if cam_id[1] != 'alive':
             print("Could not start stream", cam_id)
             self.stopped = True
+
+    def update(self):
+        self.initialize_connection()
         try:
             while not (self.stopped or self.n_stream == 0):
-                curr_time = time.time()
+                self.start_t = time.time()
                 cam_id, frame = self.hub.recv_image()
-                self.hub.send_reply(b'OK')
 
                 if cam_id[1] != 'alive':
                     self.n_stream -= 1
                     if self.verbose:
                         print(cam_id)
+                    if not self.merge_stream:
                         cv2.destroyWindow(cam_id[0])
                     continue
-
+                cam_time = cam_id[2]
                 if self.merge_stream:
-                    cam_n = int(re.findall('\d+', cam_id[0][-1])[-1])
-                    frame_stack[self.h * cam_n:self.h * (cam_n + 1), :] = frame
-                    img = cv2.remap(frame_stack, self.map_x, self.map_y, cv2.INTER_LINEAR)
-                    self.latest_frames["LAB"] = img
+                    frame = cv2.remap(frame, self.map_x, self.map_y, cv2.INTER_LINEAR)
+                    self.latest_frames["LAB"] = frame
                 else:
-                    img = frame
-                    self.latest_frames[cam_id[0]] = img
-                self.buffer.sync_q.put_nowait((curr_time - self.start_t, img))
-                self.start_t = curr_time
-                if curr_time - self.start_t > 10 and self.snapped is False:
+                    self.latest_frames[cam_id[0]] = frame
+
+                self.buffer.sync_q.put_nowait((cam_time, frame))
+                # print(cam_id[0], self.buffer.sync_q.qsize(),
+                #       round(time.time()-self.start_t, 3),
+                #       round(cam_time - self.start_t, 3),
+                #       round(merge_t - self.start_t, 3),
+                #       round(time.time() - merge_t, 3))
+
+                self.hub.send_reply(b'OK')
+                if not self.snapped and time.time() - self.start_t > 10:
                     self.snapshot()
         except KeyboardInterrupt:
             time.sleep(1)
@@ -113,6 +120,7 @@ class ZMQHubReceiverThread:
                 print(e)
 
         cv2.destroyAllWindows()
+        self.hub.send_reply(b'OK')
         self.buffer.close()
         self.hub.close()
         self.hub.zmq_socket.close()
