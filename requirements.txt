@@ -1,0 +1,8 @@
+imagezmq
+imutils
+janus
+opencv-python
+pip-chill
+
+# Non PIP Packages
+# -e thirdparty/revolve2-core
