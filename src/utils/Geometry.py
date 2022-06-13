@@ -5,11 +5,6 @@ from scipy.spatial import ConvexHull, Delaunay
 def obtain_image_hull(image: np.array, points: np.array):
     points = points.squeeze()
     hull = ConvexHull(points)
-    # deln = Delaunay(points[hull.vertices])
-    # idx = np.stack(np.indices(image.shape), axis=-1)
-    # out_idx = np.nonzero(deln.find_simplex(idx) + 1)
-    # out_img = np.zeros_like(image)
-    # out_img[out_idx] = 1
     return image, hull
 
 
@@ -24,7 +19,7 @@ def pix2meter(dist):
     # for ind in range(1, len(dist5)):
     #     dist1 = np.hstack((dist1, np.diag(dist5, ind) / ind))
     # np.mean(dist1)
-    conversion_rate = 376.1634939248632 #pxels/meter
+    conversion_rate = 376.1634939248632  # pixels/meter
     return dist/conversion_rate
 
 

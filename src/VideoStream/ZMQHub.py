@@ -19,9 +19,9 @@ class ZMQHubReceiverThread:
                  merge_stream: bool = False,
                  snapshot_path: str = None,):
         self.hub = imagezmq.ImageHub()
-        running = threading.Event()
-        running.set()
+
         self.thread = Thread(target=self.update, args=())
+        self.stop_event = threading.Event()
         self.thread.daemon = True
         self.stopped = False
         self.latest_frames = {}
@@ -136,8 +136,9 @@ class ZMQHubReceiverThread:
         if self.verbose:
             print("Hub thread is still active:", self.thread.is_alive())
         self.stopped = True
+        self.stop_event.set()
         self.thread.join()
-        return self.thread.is_alive()
+        return self.thread.is_alive() and self.stop_event.is_set()
 
     def snapshot(self):
         frame_stack = np.zeros((self.h * self.n_stream, self.w, 3), dtype=np.uint8)

@@ -1,5 +1,6 @@
 import re
-from threading import Thread
+import threading
+from threading import Thread, Event
 import time
 from typing import List
 
@@ -22,6 +23,7 @@ class VideoStreamSender:
 
         # intialize thread
         self.thread = Thread(target=self.update, args=())
+        self.stop_event = threading.Event()
         self.h = None
         self.w = None
         self.n_streams = len(self.streams)
@@ -63,6 +65,6 @@ class VideoStreamSender:
     def exit(self):
         # indicate that the thread should be stopped
         self.stopped = True
-        # wait until stream resources are released (producer thread might be still grabbing frame)
+        self.stop_event.set()
         self.thread.join()
-        return self.thread.is_alive()
+        return self.thread.is_alive() and self.stop_event.is_set()

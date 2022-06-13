@@ -1,0 +1,6 @@
+[submodule "thirdparty/reversible-de"]
+	path = thirdparty/revde/
+	url = https://github.com/jmtomczak/reversible-de
+[submodule "thirdparty/revde"]
+	path = thirdparty/revde
+	url = https://github.com/jmtomczak/reversible-de

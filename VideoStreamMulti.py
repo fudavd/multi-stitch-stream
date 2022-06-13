@@ -14,7 +14,7 @@ async def run():
 
     cam_list = []
     show_stream = True
-    capture = MotionCapture.MotionCaptureRobot("spider", ["red", "green"], return_img=show_stream).log_robot_pos
+    capture = MotionCapture.MotionCaptureRobot("spider", ["red", "green"], return_img=show_stream).capture_aruco
     hub = ZMQHub.ZMQHubReceiverThread(1, verbose=True, merge_stream=True)
     hub.start()
     try:

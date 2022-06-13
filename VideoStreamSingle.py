@@ -8,13 +8,13 @@ from src.Experiments import MotionCapture
 
 
 async def run():
-    with open("./secret/cam_paths.txt", "r") as file:
+    with open("secret/cam_paths.txt", "r") as file:
         paths = file.read().splitlines()
     ind = 1
-    map_x, map_y, roi = load_barrel_map(f'./Calibration_data/Barrel/cam{ind}.npz')
+    map_x, map_y, roi = load_barrel_map(f'Calibration_data/Barrel/cam{ind}.npz')
     t_func = create_transform_function(map_x, map_y)
     func = MotionCapture.MotionCapture(['green', 'blue', 'red'])
-    cam = VideoStream.VideoStreamSender(paths[ind], f'cam{ind}', transform=[t_func, func.get_robot_pos])
+    cam = VideoStream.VideoStreamSender([paths[ind]], f'cam{ind}', transform=[t_func, func.get_robot_pos])
     hub = ZMQHub.ZMQHubReceiverThread(1, True)
     cam.start()
     hub.start()

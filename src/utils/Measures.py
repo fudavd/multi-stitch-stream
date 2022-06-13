@@ -3,6 +3,15 @@ from typing import List
 import numpy as np
 
 
+def find_closest(source: np.ndarray, match_closest: np.ndarray):
+    idx = source.searchsorted(match_closest)
+    idx = np.clip(idx, 1, len(source)-1)
+    left = source[idx-1]
+    right = source[idx]
+    idx -= match_closest - left < right - match_closest
+    return idx
+
+
 def geometric_median(X):
     summed_dist = []
     for row in X:

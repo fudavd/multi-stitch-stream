@@ -68,11 +68,12 @@ class ExperimentStream:
 
     def start_experiment(self, func=[]):
         self.exp_func = func
+        self.stopped = False
         self.start_time = time.time()
 
-    def stop_experiment(self):
+    def pause_experiment(self):
         if self.verbose:
-            print("stop stream")
+            print("Pausing stream")
         self.stopped = True
         self.exp_func = []
 

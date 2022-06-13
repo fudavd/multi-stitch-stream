@@ -1,11 +1,16 @@
 .idea
-thirdparty/*
+/.venv
+/experiment_data/*
 
 # DO NOT INCLUDE SENSITIVE INFORMATION
 **.jpg
 **.jpeg
 **.png
+
+# DO NOT INCLUDE EXPERIMENT DATA
 **.npz
+**.npy
+**.pdf
 **.csv
 
 # DO INCLUDE

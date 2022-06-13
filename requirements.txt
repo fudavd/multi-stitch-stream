@@ -2,6 +2,7 @@ imagezmq
 imutils
 janus
 opencv-python
+opencv-contrib-python
 pip-chill
 
 # Non PIP Packages
