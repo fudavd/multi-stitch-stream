@@ -1,44 +1,33 @@
-import datetime
-import threading
+import gc
 import time
-
 import numpy as np
 
 from src.Experiments import MotionCapture
-# from src.VideoStream.ExperimentStream import ExperimentStream
-from src.VideoStream import VideoStream, ZMQHub, close_stream, ExperimentStream
+from src.Experiments.Robots import create_default_robot, show_grid_map
+from src.Experiments.Controllers import CPG
+from src.Experiments.Fitnesses import real_abs_dist, unwrapped_rot, signed_rot
+from src.VideoStream import ExperimentStream
 import logging
 from revolve2.core.rpi_controller_remote import connect
-import cv2
 
-n_servos = 8
-pin_list = [17, 18, 27, 22, 23, 24, 10, 9, 25, 11, 8, 7, 5, 6, 12, 13, 16, 19, 20, 25, 21]
-genome = np.random.uniform(-1, 1, (n_servos + 4))
-inter_weights = genome[:n_servos]
-weight_matrix = np.diag(inter_weights, n_servos)
-weight_matrix -= weight_matrix.T
-
-initial_state = np.random.uniform(-1, 1, (n_servos*2))
-config = {
-    "controller_module": "revolve2.actor_controllers.cpg",
-    "controller_type": "Cpg",
-    "control_frequency": 60,
-    "gpio": [{"dof": ind, "gpio_pin": pin_list[ind], "invert": False} for ind in range(n_servos)],
-    "serialized_controller": {
-        "state": np.repeat([0.0, 0.6], n_servos).tolist(),
-        "num_output_neurons": n_servos,
-        "weight_matrix": weight_matrix.tolist(),
-    },
-}
+from src.utils.Measures import find_closest
 
 
 async def main() -> None:
     run_time = 60
-    n_runs = 1
-    run = 0
+    skills = ['gait', 'left', 'right']
     show_stream = False
-    error = False
-    id = 'spider'
+    id = 'ant'
+    exp_folder = f'./experiment_data/{id}'
+    weight_mat = np.load(exp_folder + '/weight_mat.npy', allow_pickle=True)
+    f = np.load(f'{exp_folder}/fitness_full.npy', allow_pickle=True)
+    x = np.load(f'{exp_folder}/x_full.npy', allow_pickle=True)
+
+    init_idx = np.nanargmax(f, axis=0)
+    print("expected fitnesses: \n",
+          f[init_idx])
+    initial_state = x[init_idx, :]
+    n_servos = int(weight_mat.shape[0]/2)
 
     logging.basicConfig(
         level=logging.INFO,
@@ -49,23 +38,31 @@ async def main() -> None:
         print(f"Connection made with {id}")
         with open("./secret/cam_paths.txt", "r") as file:
             paths = file.read().splitlines()
-        experiment = ExperimentStream.ExperimentStream(paths, show_stream=show_stream, output_dir=f'./experiment_data/{id}')
-        while run < n_runs and not error:
-            capture = MotionCapture.MotionCaptureRobot(f'{id}_{run}', ["red", "green"], return_img=show_stream)
-            experiment.start_experiment([capture.log_robot_pos])
+        for skill in range(initial_state.shape[0]):
+            experiment = ExperimentStream.ExperimentStream(paths, show_stream=show_stream,
+                                                           output_dir=f'./experiment_data/{id}')
+            print(f"Test {exp_folder} brain: skill {skills[skill]}")
+            brain = CPG(n_servos, weight_mat, initial_state[skill, :])
+            config = brain.create_config()
+
+            capture = MotionCapture.MotionCaptureRobot(f'{id}_{skills[skill]}', ["red", "green"], return_img=show_stream)
+            experiment.start_experiment([capture.store_img])
             robot_controller = asyncio.create_task(conn.run_controller(config, run_time))
             experiment_run = asyncio.create_task(experiment.stream())
             tasks = [experiment_run, robot_controller]
-            start_command_time = time.time()
+            time.sleep(0.1)
             finished, unfinished = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+
             for task in finished:
+                print(task)
                 start_time, log = robot_controller.result()
 
-            experiment.stop_experiment()
+            experiment.close_stream()
             await experiment_run
-            capture.save_results(f'./experiment_data/{id}')
-            np.save(f'./experiment_data/{id}/{id}_{run}/state_con', log)
-            np.save(f'./experiment_data/{id}/{id}_{run}/start_con', np.array([start_time, start_command_time]))
+
+            capture.post_process_img_buffer(exp_folder)
+            np.save(f'{exp_folder}/{id}_{skills[skill]}/state_con', log)
+            np.save(f'{exp_folder}/{id}_{skills[skill]}/start_con', start_time.timestamp())
 
             state_con = np.empty((0, len(log[0]['serialized_controller']['state'])))
             t_con = np.empty((0, 1))
@@ -73,8 +70,33 @@ async def main() -> None:
                 t_con = np.vstack((t_con, sample['timestamp']))
                 state_con = np.vstack((state_con, sample['serialized_controller']['state']))
 
-            run += 1
-    experiment.stop_stream()
+            capture_t = np.array(capture.t) - start_time.timestamp()
+            capture_state = capture.robot_states
+            capture_state = capture_state[(0 < capture_t) & (capture_t <= run_time), :]
+            capture_t = capture_t[(0 < capture_t) & (capture_t <= run_time)]
+
+            control_t = (t_con.flatten() - t_con[0, 0]) / 1000
+            index = find_closest(control_t, capture_t)
+            control_state = state_con[index]
+
+            index = capture_t < run_time
+
+            f_dist = real_abs_dist(capture_state[:, :2]).squeeze()
+            f_angle2 = signed_rot(capture_state[:, 2:])
+            fitnesses = np.array([f_dist, f_angle2, -f_angle2])
+            print(f'Retest for {skills[skill]}: {f[init_idx[skill]]}\n'
+                  f'Fitnesses: {fitnesses}\n')
+
+            np.save(f'{exp_folder}/{id}_{skills[skill]}/fitnesses_trial', fitnesses)
+            np.save(f'{exp_folder}/{id}_{skills[skill]}/x_trial', control_state[index])
+
+            capture.clear_buffer()
+            del capture
+            del experiment
+            gc.collect()
+            await asyncio.sleep(1)
+
+    print("Finished")
 
 
 if __name__ == "__main__":

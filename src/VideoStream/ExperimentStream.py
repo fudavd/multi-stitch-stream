@@ -39,6 +39,7 @@ class ExperimentStream:
     def close_stream(self):
         close_stream(self.cam_list, self.hub, self.running)
         self.stopped = True
+        self.exp_func.clear()
         return True
 
     async def clear_buffer(self):
@@ -76,6 +77,3 @@ class ExperimentStream:
             print("Pausing stream")
         self.stopped = True
         self.exp_func = []
-
-    def stop_stream(self):
-        close_stream(self.cam_list, self.hub, self.running)

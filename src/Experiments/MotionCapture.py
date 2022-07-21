@@ -104,6 +104,7 @@ class MotionCaptureRobot:
         self.robot_states = np.empty((0, 4))  # (x, y, x_v, y_v)
         self.t = []
         self.prev_state = None
+        self.img_buffer = []
 
     def capture_rgb(self, img, time_stamp=None):
         Img = img.copy()
@@ -169,17 +170,17 @@ class MotionCaptureRobot:
                 self.t.append(curr_t)
 
         if self.return_img:
-            if idx is not None:
-                x_big, y_big, w_big, h_big, x_small, y_small, w_small, h_small = robot_contour[idx]
-                cv2.rectangle(Img, (x_big, y_big), (x_big + w_big, y_big + h_big), (0, 255,), 3)
-                font = cv2.FONT_HERSHEY_SIMPLEX
-                cv2.putText(Img, f"{self.robot_id} | size: {w_big * h_big}, {w_small * h_small}",
-                            (x_big + 14, y_big + 14), font, 0.7, (0, 0, 255), 2)  # +- 10 for better display
-                lineThickness = 2
-                cv2.line(Img, (int(robot_data[idx][0]), int(robot_data[idx][1])),
-                         (int(robot_data[idx][0] + robot_data[idx][2] * 30),
-                          int(robot_data[idx][1] + robot_data[idx][3] * 30)),
-                         (0, 255, 0), lineThickness)
+            # if idx is not None:
+            #     x_big, y_big, w_big, h_big, x_small, y_small, w_small, h_small = robot_contour[idx]
+            #     cv2.rectangle(Img, (x_big, y_big), (x_big + w_big, y_big + h_big), (0, 255,), 3)
+            #     font = cv2.FONT_HERSHEY_SIMPLEX
+            #     cv2.putText(Img, f"{self.robot_id} | size: {w_big * h_big}, {w_small * h_small}",
+            #                 (x_big + 14, y_big + 14), font, 0.7, (0, 0, 255), 2)  # +- 10 for better display
+            #     lineThickness = 2
+            #     cv2.line(Img, (int(robot_data[idx][0]), int(robot_data[idx][1])),
+            #              (int(robot_data[idx][0] + robot_data[idx][2] * 30),
+            #               int(robot_data[idx][1] + robot_data[idx][3] * 30)),
+            #              (0, 255, 0), lineThickness)
             return Img
         return
 
@@ -219,7 +220,6 @@ class MotionCaptureRobot:
                 self.prev_state = curr_state.squeeze()
                 self.robot_states = np.vstack((self.robot_states, self.prev_state))
                 self.t.append(curr_t)
-
         if self.return_img:
             if idx is not None:
                 x, y, x_vec, y_vec = robot_data[idx]
@@ -233,8 +233,20 @@ class MotionCaptureRobot:
                          (int(x + x_vec),
                           int(y + y_vec)),
                          (0, 255, 0), lineThickness)
+            # try:
+            #     if curr_t - self.t[-1] >= 0.5:
+            #         cv2.imwrite(os.path.join('experiment_data', 'camera', f'{curr_t}.jpg'), img)
+            # except:
+            #     return
             return img
         return
+
+    def store_img(self, img, time_stamp=None):
+        if time_stamp is None:
+            curr_t = time.time()
+        else:
+            curr_t = time_stamp
+        self.img_buffer.append((curr_t, img))
 
     def get_current_state(self):
         return self.prev_state
@@ -249,17 +261,52 @@ class MotionCaptureRobot:
             np.save(os.path.join(dir, self.robot_id, "state", ), np.array(self.robot_states))
             np.save(os.path.join(dir, self.robot_id, "t", ), np.array(self.t).reshape((len(self.t), 1)))
 
+    def save_img_buffer(self, dir=''):
+        path = os.path.join(dir, self.robot_id, 'images')
+        try:
+            os.makedirs(path)
+        except OSError as error:
+            print("Directory '%s' can not be created")
+        for t, img in self.img_buffer:
+            cv2.imwrite(os.path.join(path, f'{t}.jpg'), img)
+
+    def post_process_img_buffer(self, dir=''):
+        path = os.path.join(dir, self.robot_id, 'images')
+        try:
+            os.makedirs(path)
+            print(path, 'is made')
+        except OSError as error:
+            print(f"Directory {path} can not be created")
+        print(f'Parse img buffer: len {len(self.img_buffer)}')
+        for t, img in self.img_buffer:
+            cv2.imwrite(os.path.join(path, f'{t}.jpg'), img)
+            self.capture_aruco(img, t)
+
+    def clear_buffer(self):
+        self.img_buffer.clear()
 
 from cv2 import aruco
 
 # aruco dictionary and parameters
 # aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
 aruco_parameters = aruco.DetectorParameters_create()
+aruco_parameters.adaptiveThreshWinSizeMin = 3
+aruco_parameters.adaptiveThreshWinSizeMax = 18
+aruco_parameters.adaptiveThreshWinSizeStep = 3
+aruco_parameters.minMarkerPerimeterRate = 0.01
+aruco_parameters.maxMarkerPerimeterRate = 4
+aruco_parameters.polygonalApproxAccuracyRate = 0.1
+aruco_parameters.perspectiveRemovePixelPerCell = 10
 # define an empty custom dictionary for markers of size 4
 aruco_dict = aruco.custom_dictionary(0, 3, 1)
 aruco_dict.bytesList = np.empty(shape = (1, 2, 4), dtype = np.uint8)
 mybits = np.array([[0, 1, 0], [0, 0, 0], [1, 0, 1]], dtype = np.uint8)
 aruco_dict.bytesList[0] = aruco.Dictionary_getByteListFromBits(mybits)
+
+# f = plt.figure()
+# plt.imshow(aruco.drawMarker(aruco_dict, 0, 128), cmap='gray')
+# plt.axis(False)
+# f.savefig("custom_aruco_" + str(i) + ".pdf", bbox_inches='tight')
 
 def MotionCaptureRobot_Aruco(image):
     """
