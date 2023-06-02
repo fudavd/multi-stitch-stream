@@ -124,7 +124,7 @@ def create_default_robot(name: str, random_seed: int=420):
     return body, network_struct
 
 
-def show_grid_map(body, name: str="robot"):
+def show_grid_map(body, name: str="robot", hat_type="v1"):
     active_hinges_unsorted = body.find_active_hinges()
     active_hinge_map = {active_hinge.id: active_hinge for active_hinge in active_hinges_unsorted}
     _, dof_ids = body.to_actor()
@@ -136,7 +136,10 @@ def show_grid_map(body, name: str="robot"):
     n_rows = coord_range[1]
     print_str = [[' '] * n_cols for _ in range(n_rows+1)]
 
-    pin_list = ['17', '18', '27', '22', '23', '24', '10', '09', '25', '11', '08', '07', '05', '06', '12', '13', '16', '19', '20', '25', '21']
+    pin_lists = {"v1": ['17', '18', '27', '22', '23', '24', '10', ' 9', '25', '11', ' 8', ' 7', ' 5', ' 6', '12', '13', '16', '19', '20', '25', '21'],
+                 "v2": [' 0', ' 1', ' 2', ' 3', ' 4', ' 5', ' 6', ' 7', ' 8', ' 9', '10', '11', '12', '13', '14', '15'],
+                 "pca9685": [' 0', ' 1', ' 2', ' 3', ' 4', ' 5', ' 6', ' 7', ' 8', ' 9', '10', '11', '12', '13', '14', '15']}
+    pin_list = pin_lists[hat_type]
     print(f"Mapping {name} robot\n"
           f"PIN #\t| Coord")
     for ind, coord in enumerate(grid_map):
@@ -153,7 +156,7 @@ def show_grid_map(body, name: str="robot"):
         print(row_str)
 
     active_hinges = [active_hinge_map[id] for id in dof_ids]
-    connections = find_connections_full(body, active_hinges)
+    connections = find_connections_full(active_hinges)
     dofs = np.array(dof_ids)
     pin_list_int = [int(pin) for pin in pin_list]
     l_mat = np.diag(pin_list_int[:len(dof_ids)])
@@ -166,8 +169,7 @@ def show_grid_map(body, name: str="robot"):
         print(f'\t{u_mat[ind,:]}  |{pin_list_int[ind]}|')
 
 
-def find_connections_full(
-    body: Body, active_hinges: List[ActiveHinge]
+def find_connections_full(active_hinges: List[ActiveHinge]
 ) -> List[Tuple[ActiveHinge, ActiveHinge]]:
     # sort by id, will be used later when ignoring existing connections
     active_hinges.sort(key=lambda mod: mod.id)
