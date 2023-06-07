@@ -2,7 +2,6 @@ import numpy as np
 from scipy.sparse import random
 from scipy import stats
 from numpy.random import default_rng
-from revolve2.core.modular_robot import ActiveHinge, Body, Brick, ModularRobot
 
 pin_list = {"v1": [17, 18, 27, 22, 23, 24, 10, 9, 25, 11, 8, 7, 5, 6, 12, 13, 16, 19, 20, 25, 21],
             "v2": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],

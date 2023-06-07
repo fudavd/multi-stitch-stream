@@ -1,15 +1,12 @@
-import os.path
-import traceback
-import sys
 import time
 from typing import List
 
 import cv2
 import numpy as np
 
-from src.utils.Geometry import pix2meter
-from src.utils.Filters import mask_colors
-from src.utils.Measures import obtain_color_range
+from ..utils.Geometry import pix2meter
+from ..utils.Filters import mask_colors
+from ..utils.Measures import obtain_color_range
 
 
 class MotionCapture:

@@ -6,9 +6,6 @@ from typing import List, Optional
 import cv2
 import numpy as np
 
-from src.utils.Filters import mask_colors
-from src.utils.Measures import obtain_color_range
-
 
 # Use the keypoints to stitch the images
 def get_stitched_image(img1, img2, M, mid_cut: bool = False):
