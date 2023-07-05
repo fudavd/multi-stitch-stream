@@ -1,8 +1,8 @@
 imagezmq
 imutils
 janus
-opencv-python
-opencv-contrib-python
+opencv-contrib-python==4.5.5.64
+opencv-python==4.5.5.64
 pip-chill
 
 # Non PIP Packages

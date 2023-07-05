@@ -1,7 +1,6 @@
 import os
 import time
 import numpy as np
-# import revde
 
 from thirdparty.revde.algorithms.recombination import DifferentialRecombination
 from thirdparty.revde.algorithms.selections import SelectBest
