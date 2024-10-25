@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.utils.Geometry import pix2meter, real_distance
+from ..utils.Geometry import pix2meter, real_distance
 
 
 def real_abs_dist(positions: np.ndarray):

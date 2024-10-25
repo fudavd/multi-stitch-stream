@@ -4,7 +4,7 @@ from typing import Tuple, List
 import cv2
 import numpy as np
 
-from src.Calibrate import StitchFunctions
+from ..Calibrate import StitchFunctions
 
 
 def search_file_list(rootname, file_name):

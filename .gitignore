@@ -1,6 +1,7 @@
 .idea
 /.venv
 /experiment_data/*
+**/__pycache__
 
 # DO NOT INCLUDE SENSITIVE INFORMATION
 **.jpg

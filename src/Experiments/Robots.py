@@ -185,7 +185,7 @@ def show_grid_map(body, name: str="robot", hat_type="v1"):
         print(row_str)
 
     active_hinges = [active_hinge_map[id] for id in dof_ids]
-    connections = find_connections_full(body, active_hinges)
+    connections = find_connections_full(active_hinges)
     dofs = np.array(dof_ids)
     pin_list_int = [int(pin) for pin in pin_list]
     l_mat = np.diag(pin_list_int[:len(dof_ids)])
@@ -198,8 +198,7 @@ def show_grid_map(body, name: str="robot", hat_type="v1"):
         print(f'\t{u_mat[ind,:]}  |{pin_list_int[ind]}|')
 
 
-def find_connections_full(
-    body: Body, active_hinges: List[ActiveHinge]
+def find_connections_full(active_hinges: List[ActiveHinge]
 ) -> List[Tuple[ActiveHinge, ActiveHinge]]:
     # sort by id, will be used later when ignoring existing connections
     active_hinges.sort(key=lambda mod: mod.id)

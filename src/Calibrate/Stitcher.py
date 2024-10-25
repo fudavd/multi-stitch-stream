@@ -2,12 +2,12 @@ import copy
 from typing import List, Optional, Tuple
 import os
 import sys
-from src.utils.utils import Image, PanoramaImage
+from ..utils.utils import Image, PanoramaImage
 import cv2
 import numpy as np
-import src.Calibrate.StitchFunctions as StitchFunctions
-from src.utils.Filters import mask_colors
-from src.utils.Measures import obtain_color_range
+import StitchFunctions as StitchFunctions
+from ..utils.Filters import mask_colors
+from ..utils.Measures import obtain_color_range
 
 
 class PairStitcher:
