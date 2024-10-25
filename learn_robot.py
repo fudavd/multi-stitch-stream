@@ -38,20 +38,22 @@ async def main() -> None:
     run = 0
     show_stream = False
     error = False
-    id = 'ant'
+    id = 'gecko'
+    hat_version = "v1"
     exp_folder = f'./experiment_data/{id}'
 
     body, network_struct = create_default_robot(id, random_seed=np.random.randint(1000))
-    show_grid_map(body, id)
+    show_grid_map(body, id, hat_version)
 
     matrix_weights = np.random.uniform(-1, 1, network_struct.num_params)
     weight_mat = network_struct.make_weight_matrix_from_params(matrix_weights)
 
-    n_servos = network_struct.num_states
+    n_servos = int(network_struct.num_states/2)
+
     if os.path.isfile(exp_folder + '/weight_mat.npy'):
         weight_mat = np.load(exp_folder + '/weight_mat.npy', allow_pickle=True)
     np.save(exp_folder + '/weight_mat', weight_mat)
-    initial_state = np.random.uniform(-1, 1, (n_servos, n_runs))
+    initial_state = np.random.uniform(-1, 1, (n_servos*2, n_runs))
 
     logging.basicConfig(
         level=logging.INFO,
@@ -78,7 +80,7 @@ async def main() -> None:
                                                            output_dir=f'./experiment_data/{id}')
             print(f"Set new brain for run {run +1}/{n_runs}")
             brain = CPG(n_servos, weight_mat, initial_state[:, run])
-            config = brain.create_config()
+            config = brain.create_config(hat_version)
 
             capture = MotionCapture.MotionCaptureRobot(f'{id}_{run}', ["red", "green"], return_img=show_stream)
             experiment.start_experiment([capture.capture_aruco])
@@ -132,7 +134,10 @@ async def main() -> None:
                 if np.isnan(f_angle):
                     fitnesses[1:] = -np.inf
                 f_trial.append(fitnesses)
-            print(np.nanmax(f_trial, axis=0))
+            try:
+                print(np.nanmax(f_trial, axis=0))
+            except Exception as e:
+                print(e.with_traceback())
             f.append(np.array(f_trial).squeeze())
             c.append(capture_state)
             np.save(f'{exp_folder}/{id}_{run}/fitnesses_trial', f_trial)

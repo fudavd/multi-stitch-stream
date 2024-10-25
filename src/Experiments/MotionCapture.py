@@ -246,7 +246,8 @@ class MotionCaptureRobot:
             curr_t = time.time()
         else:
             curr_t = time_stamp
-        self.img_buffer.append((curr_t, img))
+        if len(self.img_buffer) < 1000:
+            self.img_buffer.append((curr_t, img))
 
     def get_current_state(self):
         return self.prev_state
@@ -291,12 +292,12 @@ from cv2 import aruco
 # aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
 aruco_parameters = aruco.DetectorParameters_create()
 aruco_parameters.adaptiveThreshWinSizeMin = 3
-aruco_parameters.adaptiveThreshWinSizeMax = 18
-aruco_parameters.adaptiveThreshWinSizeStep = 3
-aruco_parameters.minMarkerPerimeterRate = 0.01
-aruco_parameters.maxMarkerPerimeterRate = 4
-aruco_parameters.polygonalApproxAccuracyRate = 0.1
-aruco_parameters.perspectiveRemovePixelPerCell = 10
+aruco_parameters.adaptiveThreshWinSizeMax = 60
+# aruco_parameters.adaptiveThreshWinSizeStep = 3
+# aruco_parameters.minMarkerPerimeterRate = 0.01
+# aruco_parameters.maxMarkerPerimeterRate = 4
+# aruco_parameters.polygonalApproxAccuracyRate = 1
+# aruco_parameters.perspectiveRemovePixelPerCell = 10
 # define an empty custom dictionary for markers of size 4
 aruco_dict = aruco.custom_dictionary(0, 3, 1)
 aruco_dict.bytesList = np.empty(shape = (1, 2, 4), dtype = np.uint8)

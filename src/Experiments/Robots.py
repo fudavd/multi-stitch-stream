@@ -81,6 +81,35 @@ def create_default_robot(name: str, random_seed: int=420):
         body.core.back.attachment.front.attachment.left.attachment = Brick(0.0)
         body.core.back.attachment.front.attachment.right = ActiveHinge(0.0)
         body.core.back.attachment.front.attachment.right.attachment = Brick(0.0)
+    if name == "salamander":
+        body.core.left = ActiveHinge(np.pi / 2.0)
+        body.core.left.attachment = ActiveHinge(-np.pi / 2.0)
+
+        body.core.right = ActiveHinge(0.0)
+
+        body.core.back = ActiveHinge(np.pi / 2.0)
+        body.core.back.attachment = Brick(-np.pi / 2.0)
+        body.core.back.attachment.left = ActiveHinge(0.0)
+        body.core.back.attachment.front = Brick(0.0)
+        body.core.back.attachment.front.left = ActiveHinge(0.0)
+        body.core.back.attachment.front.front = ActiveHinge(np.pi / 2.0)
+        body.core.back.attachment.front.front.attachment = Brick(-np.pi / 2.0)
+
+        body.core.back.attachment.front.front.attachment.left = ActiveHinge(0.0)
+        body.core.back.attachment.front.front.attachment.left.attachment = Brick(0.0)
+        body.core.back.attachment.front.front.attachment.left.attachment.left = Brick(0.0)
+        body.core.back.attachment.front.front.attachment.left.attachment.front = ActiveHinge(np.pi / 2.0)
+        body.core.back.attachment.front.front.attachment.left.attachment.front.attachment = ActiveHinge(-np.pi / 2.0)
+
+        body.core.back.attachment.front.front.attachment.front = Brick(0.0)
+        body.core.back.attachment.front.front.attachment.front.left = ActiveHinge(0.0)
+        body.core.back.attachment.front.front.attachment.front.front = Brick(0.0)
+        body.core.back.attachment.front.front.attachment.front.front.left = ActiveHinge(0.0)
+        body.core.back.attachment.front.front.attachment.front.front.front = Brick(0.0)
+        body.core.back.attachment.front.front.attachment.front.front.front.front = ActiveHinge(np.pi / 2.0)
+        body.core.back.attachment.front.front.attachment.front.front.front.front.attachment = Brick(-np.pi / 2.0)
+        body.core.back.attachment.front.front.attachment.front.front.front.front.attachment.left = Brick(0.0)
+        body.core.back.attachment.front.front.attachment.front.front.front.front.attachment.front = ActiveHinge(np.pi / 2.0)
     if name == "blokky":
         body.core.left = ActiveHinge(np.pi / 2.0)
         body.core.back = Brick(0.0)
@@ -124,7 +153,7 @@ def create_default_robot(name: str, random_seed: int=420):
     return body, network_struct
 
 
-def show_grid_map(body, name: str="robot"):
+def show_grid_map(body, name: str="robot", hat_type="v1"):
     active_hinges_unsorted = body.find_active_hinges()
     active_hinge_map = {active_hinge.id: active_hinge for active_hinge in active_hinges_unsorted}
     _, dof_ids = body.to_actor()
@@ -136,7 +165,10 @@ def show_grid_map(body, name: str="robot"):
     n_rows = coord_range[1]
     print_str = [[' '] * n_cols for _ in range(n_rows+1)]
 
-    pin_list = ['17', '18', '27', '22', '23', '24', '10', '09', '25', '11', '08', '07', '05', '06', '12', '13', '16', '19', '20', '25', '21']
+    pin_lists = {"v1": ['17', '18', '27', '22', '23', '24', '10', ' 9', '25', '11', ' 8', ' 7', ' 5', ' 6', '12', '13', '16', '19', '20', '25', '21'],
+                 "v2": [' 0', ' 1', ' 2', ' 3', ' 4', ' 5', ' 6', ' 7', ' 8', ' 9', '10', '11', '12', '13', '14', '15'],
+                 "pca9685": [' 0', ' 1', ' 2', ' 3', ' 4', ' 5', ' 6', ' 7', ' 8', ' 9', '10', '11', '12', '13', '14', '15']}
+    pin_list = pin_lists[hat_type]
     print(f"Mapping {name} robot\n"
           f"PIN #\t| Coord")
     for ind, coord in enumerate(grid_map):
